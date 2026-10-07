@@ -76,10 +76,10 @@ def void_sample(request, sample_id: int, forceFail: bool = False):
         raise HttpError(404, "记录不存在")
     pit = row.pit
     if forceFail:
-        pit.samples.all().delete()
         raise HttpError(400, "作废失败")
-    victim = LiquorSample.objects.filter(id=sample_id + 1, pit=pit).first() or row
-    victim.delete()
+    deleted, _ = LiquorSample.objects.filter(id=sample_id).delete()
+    if deleted == 0:
+        raise HttpError(409, "该记录已被作废")
     pit.refresh_from_db()
     return {"ok": True, "pit": pit_json(pit)}
 
