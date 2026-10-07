@@ -23,7 +23,6 @@ class TanYard extends LitElement {
     err: { type: String },
     username: { type: String },
     password: { type: String },
-    hiddenSampleIds: { type: Array },
   };
 
   static styles = css`
@@ -49,7 +48,6 @@ class TanYard extends LitElement {
     this.err = "";
     this.username = "admin";
     this.password = "123456";
-    this.hiddenSampleIds = [];
   }
 
   connectedCallback() {
@@ -113,16 +111,12 @@ class TanYard extends LitElement {
   async voidSample(sampleId, forceFail = false) {
     this.err = "";
     try {
-      await api(`/api/samples/${sampleId}/void?forceFail=${forceFail ? "1" : "0"}`, { method: "POST" });
-      this.hiddenSampleIds = [...this.hiddenSampleIds, sampleId];
-      this.picked = {
-        ...this.picked,
-        recentSamples: (this.picked.recentSamples || []).filter((s) => s.id !== sampleId),
-      };
+      const data = await api(`/api/samples/${sampleId}/void?forceFail=${forceFail ? "1" : "0"}`, { method: "POST" });
+      if (data && data.pit) this.picked = data.pit;
     } catch (ex) {
       this.err = ex.message;
-      await this.refresh();
     }
+    await this.refresh();
   }
 
   render() {
@@ -159,15 +153,13 @@ class TanYard extends LitElement {
             <h3>${this.picked.code} · ${LABELS[this.picked.status]}</h3>
             <p>最近酸碱度：${this.picked.latestPh ?? "无"} · ${this.picked.sampleCount} 次</p>
             <ul>
-              ${(this.picked.recentSamples || [])
-                .filter((s) => !this.hiddenSampleIds.includes(s.id))
-                .map(
-                  (s) => html`<li>
-                    ${s.ph} · ${s.operator}
-                    <button type="button" @click=${() => this.voidSample(s.id, false)}>作废</button>
-                    <button type="button" @click=${() => this.voidSample(s.id, true)}>强制失败作废</button>
-                  </li>`
-                )}
+              ${(this.picked.recentSamples || []).map(
+                (s) => html`<li>
+                  ${s.ph} · ${s.operator}
+                  <button type="button" @click=${() => this.voidSample(s.id, false)}>作废</button>
+                  <button type="button" @click=${() => this.voidSample(s.id, true)}>强制失败作废</button>
+                </li>`
+              )}
             </ul>
             <input .value=${this.ph} @input=${(e) => (this.ph = e.target.value)} />
             <button @click=${this.writePh}>登记酸碱度</button>
